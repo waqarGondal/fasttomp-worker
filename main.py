@@ -82,6 +82,14 @@ def analyze(req: AnalyzeRequest):
         'quiet': True,
         'no_warnings': True,
         'extract_flat': False,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+        }
     }
 
     try:
@@ -160,6 +168,20 @@ def run_conversion_task(job_id: str, video_id: str, req_type: str, quality: str,
         jobs[job_id]["progress"] = 20
         jobs[job_id]["message"] = "Processing video stream..."
 
+        common_ydl_opts = {
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web']
+                }
+            },
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+            },
+            'progress_hooks': [progress_hook],
+            'quiet': True,
+            'no_warnings': True,
+        }
+
         if req_type == "audio":
             file_name = sanitize_filename(title, "mp3")
             out_file = os.path.join(DOWNLOAD_DIR, f"{token}.mp3")
@@ -167,6 +189,7 @@ def run_conversion_task(job_id: str, video_id: str, req_type: str, quality: str,
             audio_q = quality_map.get(bitrate, "2")
 
             ydl_opts = {
+                **common_ydl_opts,
                 'format': 'bestaudio/best',
                 'outtmpl': os.path.join(DOWNLOAD_DIR, f"{token}.%(ext)s"),
                 'postprocessors': [{
@@ -174,9 +197,6 @@ def run_conversion_task(job_id: str, video_id: str, req_type: str, quality: str,
                     'preferredcodec': 'mp3',
                     'preferredquality': audio_q,
                 }],
-                'progress_hooks': [progress_hook],
-                'quiet': True,
-                'no_warnings': True,
             }
         else:
             height = int(re.sub(r'[^0-9]', '', quality) or "720")
@@ -185,12 +205,10 @@ def run_conversion_task(job_id: str, video_id: str, req_type: str, quality: str,
 
             format_spec = f"bestvideo[height<={height}][vcodec^=avc1]+bestaudio[acodec^=mp4a]/bestvideo[height<={height}]+bestaudio/best[height<={height}]/best"
             ydl_opts = {
+                **common_ydl_opts,
                 'format': format_spec,
                 'outtmpl': out_file,
                 'merge_output_format': 'mp4',
-                'progress_hooks': [progress_hook],
-                'quiet': True,
-                'no_warnings': True,
             }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
