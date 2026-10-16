@@ -92,6 +92,10 @@ def analyze(req: AnalyzeRequest):
         }
     }
 
+    proxy = os.environ.get("YOUTUBE_PROXY")
+    if proxy:
+        ydl_opts['proxy'] = proxy
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -181,6 +185,10 @@ def run_conversion_task(job_id: str, video_id: str, req_type: str, quality: str,
             'quiet': True,
             'no_warnings': True,
         }
+
+        proxy = os.environ.get("YOUTUBE_PROXY")
+        if proxy:
+            common_ydl_opts['proxy'] = proxy
 
         if req_type == "audio":
             file_name = sanitize_filename(title, "mp3")
